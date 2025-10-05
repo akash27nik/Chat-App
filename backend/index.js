@@ -28,7 +28,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // ✅ Middleware
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "https://chit-chatfriendly.vercel.app",
   credentials: true,
 }));
 app.use(express.json());
