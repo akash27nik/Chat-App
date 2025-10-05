@@ -8,9 +8,9 @@ import { setSelectedUser, setUserData } from '../redux/userSlice.js';
 // axios.js
 import axios from 'axios';
 
-const instance = axios.create({
-  baseURL: 'https://chat-app-gg8n.onrender.com', // 👈 Render backend URL
-  withCredentials: true,
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL,
+  withCredentials: true, // if you use cookies / auth
 });
 
 function Login() {

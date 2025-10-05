@@ -3,6 +3,13 @@ import Sidebar from '../components/Sidebar'
 import MessageArea from '../components/MessageArea'
 import { useSelector } from 'react-redux'
 import getMessage from '../customHooks/getMessages'
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL,
+  withCredentials: true, // if you use cookies / auth
+});
+
 
 function Home() {
   let {selectedUser} = useSelector(state=>state.user)

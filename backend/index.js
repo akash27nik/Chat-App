@@ -13,6 +13,14 @@ import statusRoutes from "./routes/status.routes.js";
 import { app, server } from "./socket/socket.js";
 import userRoutes from "./routes/user.routes.js";
 
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL,
+  withCredentials: true, // if you use cookies / auth
+});
+
+export default api;
 
 
 dotenv.config();
