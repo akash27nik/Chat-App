@@ -5,6 +5,13 @@ import axios from 'axios';
 import { serverUrl } from '../main.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { setSelectedUser, setUserData } from '../redux/userSlice.js';
+// axios.js
+import axios from 'axios';
+
+const instance = axios.create({
+  baseURL: 'https://chat-app-gg8n.onrender.com', // 👈 Render backend URL
+  withCredentials: true,
+});
 
 function Login() {
 
