@@ -25,7 +25,7 @@ if (!fs.existsSync(uploadsDir)) {
 // ✅ Middleware
 const allowedOrigins = [
   "https://chit-chatfriendly.vercel.app",
-  "http://localhost:5173",  // ✅ for local development
+  "https://chat-app-frontend-sx6b.onrender.com",  // ✅ for local development
 ];
 
 app.use(cors({
