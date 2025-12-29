@@ -22,6 +22,7 @@ if (!fs.existsSync(uploadsDir)) {
   console.log("📂 Created uploads folder");
 }
 
+
 // ✅ Middleware
 const allowedOrigins = [
   "https://chit-chatfriendly.vercel.app",
@@ -38,6 +39,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(cookieParser());
