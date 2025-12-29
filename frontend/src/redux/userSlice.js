@@ -9,7 +9,9 @@ const userSlice = createSlice({
     selectedUser: null,
     socket: null,
     onlineUsers: [],
-    typingUsers: {} // { userId: true/false }
+    typingUsers: {}, // { userId: true/false }
+    recordingUsers: {}, // { userId: true/false }
+    drafts: {} // ✅ ADDED: { userId: "draft text..." }
   },
 
   reducers: {
@@ -31,6 +33,26 @@ const userSlice = createSlice({
       state.typingUsers[userId] = isTyping;
     },
 
+    // Recording state
+    setRecording: (state, action) => {
+      const { userId, isRecording } = action.payload;
+      if (isRecording) {
+        state.recordingUsers[userId] = true;
+      } else {
+        delete state.recordingUsers[userId];
+      }
+    },
+
+    // ✅ ADDED: Set Draft Message
+    setDraft: (state, action) => {
+      const { userId, message } = action.payload;
+      if (message && message.trim().length > 0) {
+        state.drafts[userId] = message;
+      } else {
+        delete state.drafts[userId];
+      }
+    },
+
     // ✅ Move latest messaged user to the top
     updateUserListOrder: (state, action) => {
       const userId = action.payload;
@@ -50,6 +72,8 @@ export const {
   setSocket,
   setOnlineUsers,
   setTyping,
+  setRecording,
+  setDraft, // ✅ Exported
   updateUserListOrder
 } = userSlice.actions;
 

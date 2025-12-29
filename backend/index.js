@@ -1,4 +1,3 @@
-
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
@@ -11,17 +10,6 @@ import userRouter from "./routes/user.routes.js";
 import messageRouter from "./routes/message.routes.js";
 import statusRoutes from "./routes/status.routes.js";
 import { app, server } from "./socket/socket.js";
-import userRoutes from "./routes/user.routes.js";
-
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL,
-  withCredentials: true, // if you use cookies / auth
-});
-
-export default api;
-
 
 dotenv.config();
 
@@ -35,10 +23,22 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // ✅ Middleware
+const allowedOrigins = [
+  "https://chit-chatfriendly.vercel.app",
+  "http://localhost:5173",  // ✅ for local development
+];
+
 app.use(cors({
-  origin: "https://chit-chatfriendly.vercel.app",
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -53,9 +53,9 @@ app.use("/api/status", statusRoutes);
 server.listen(port, async () => {
   try {
     await connectDB();
-    console.log(`🚀 Server started on port ${port}`);
+    console.log(` Server started on port ${port}`);
   } catch (err) {
-    console.error("❌ Failed to connect to database:", err.message);
+    console.error("Failed to connect to database:", err.message);
     process.exit(1);
   }
 });

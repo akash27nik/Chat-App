@@ -5,13 +5,6 @@ import axios from 'axios';
 import { serverUrl } from '../main.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { setSelectedUser, setUserData } from '../redux/userSlice.js';
-// axios.js
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL,
-  withCredentials: true, // if you use cookies / auth
-});
 
 function Login() {
 
@@ -93,7 +86,15 @@ let navigate = useNavigate();
         { err && <p className='text-red-500'>*{err}</p>}
 
         {/* Button */}
-        <button className='px-[20px] py-[10px] bg-[#20c7ff] rounded-2xl shadow-gray-400 shadow-lg text-[20px] w-[200px] mt-[20px]font-semibold hover:shadow-inner' disable={loading}>{loading?"Loading...": "Login"}</button>
+     <button
+  disabled={loading}   // ✅ Correct attribute
+  className={`px-[20px] py-[10px] rounded-2xl shadow-gray-400 shadow-lg text-[20px] w-[200px] mt-[20px] font-semibold hover:shadow-inner ${
+    loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#20c7ff]"
+  }`}
+>
+  {loading ? "Loading..." : "Login"}
+</button>
+
 
         <p className='cursor-pointer' onClick={()=>{ navigate("/signup")}}>Want to create a new account? <span className='text-[#20c7ff] font-semibold'>
           Sign Up

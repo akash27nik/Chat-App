@@ -25,8 +25,21 @@ const userSchema = new mongoose.Schema({
   },
   lastSeen: {
      type: Date, default: Date.now 
-
-  }
+  },
+  
+  // ✅ New Fields for Chat Actions
+  blockedUsers: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  ],
+  archivedUsers: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  ],
+  favoriteUsers: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  ],
+  markedUnreadUsers: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  ]
 
 }, { timestamps: true }); 
 

@@ -10,15 +10,28 @@ import {
   likeStatus,
   unlikeStatus,
   replyStatus,
+  getStatus,
 } from "../controllers/status.controller.js";
 
 const router = express.Router();
 
 // POST /api/status → upload status
-router.post("/", isAuth, upload.single("media"), addStatus);
+// ✅ Changed to upload.fields to accept 'media' and optional 'music'
+router.post(
+  "/",
+  isAuth,
+  upload.fields([
+    { name: "media", maxCount: 1 },
+    { name: "music", maxCount: 1 },
+  ]),
+  addStatus
+);
 
 // GET /api/status → get all statuses
 router.get("/", isAuth, getStatuses);
+
+// GET /api/status/:id → get single status by ID
+router.get("/:id", isAuth, getStatus);
 
 // DELETE /api/status/:id → delete status
 router.delete("/:id", isAuth, deleteStatus);

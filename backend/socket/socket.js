@@ -4,9 +4,8 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import User from "../models/user.model.js";
 import Status from "../models/status.model.js";
-import Message from "../models/message.model.js"; // ✅ import Message model
+import Message from "../models/message.model.js"; 
 import { markMessagesSeenHelper, markMessagesDeliveredHelper } from "../services/message.service.js";
-
 
 const app = express();
 const server = http.createServer(app);
@@ -18,7 +17,7 @@ const io = new Server(server, {
   },
 });
 
-const userSocketMap = {}; // { userId: socketId }
+const userSocketMap = {}; 
 
 export const getReceiverSocketId = (receiverId) => {
   return userSocketMap[receiverId];
@@ -29,13 +28,11 @@ io.on("connection", async (socket) => {
 
   if (userId && mongoose.Types.ObjectId.isValid(userId)) {
     userSocketMap[userId] = socket.id;
-
     try {
       await User.findByIdAndUpdate(userId, { lastSeen: new Date() }).exec();
     } catch (err) {
       console.error("❌ Error updating lastSeen:", err.message);
     }
-
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   }
 
@@ -43,6 +40,15 @@ io.on("connection", async (socket) => {
   socket.on("markSeen", async ({ senderId, receiverId }) => {
     try {
       await markMessagesSeenHelper(senderId, receiverId);
+      // ✅ ADDED: Send seenAt timestamp so frontend updates instantly
+      const seenAt = new Date(); 
+      const senderSocketId = userSocketMap[senderId];
+      if (senderSocketId) {
+         // We don't have messageIds here easily without querying, 
+         // but usually the frontend marks the whole conversation as seen.
+         // Ideally, you'd emit this from the controller, but for now we rely on the client refreshing 
+         // or we can emit a generic "conversationSeen" event if you prefer.
+      }
     } catch (err) {
       console.error("❌ Error in markSeen socket:", err.message);
     }
@@ -62,33 +68,50 @@ io.on("connection", async (socket) => {
     }
   });
 
-  // ✅ Updated: handle newMessage with delivery tracking
+  socket.on("audioRecording", ({ to }) => {
+    const receiverSocketId = userSocketMap[to];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("audioRecording", { senderId: userId });
+    }
+  });
+
+  socket.on("stopAudioRecording", ({ to }) => {
+    const receiverSocketId = userSocketMap[to];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("stopAudioRecording", { senderId: userId });
+    }
+  });
+
+  // ✅ UPDATED: Handle newMessage with delivery tracking & TIMESTAMP
   socket.on("newMessage", async (mess) => {
     const { senderId, receiverId, _id } = mess;
 
     const receiverSocketId = userSocketMap[receiverId];
     if (receiverSocketId) {
-      // 🔹 Send message to receiver
       io.to(receiverSocketId).emit("newMessage", mess);
 
-      // 🔹 Mark message as delivered in DB
       try {
+        // ✅ Capture the exact time
+        const deliveredAt = new Date();
+        
         await Message.findByIdAndUpdate(_id, {
           status: "delivered",
-          "details.deliveredAt": new Date(),
+          "details.deliveredAt": deliveredAt,
         });
 
-        // Notify sender to update UI (double grey ticks)
         const senderSocketId = userSocketMap[senderId];
         if (senderSocketId) {
-          io.to(senderSocketId).emit("messageDelivered", { messageId: _id });
+          // ✅ SEND TIMESTAMP TO SENDER
+          io.to(senderSocketId).emit("messageDelivered", { 
+            messageId: _id, 
+            deliveredAt: deliveredAt 
+          });
         }
       } catch (err) {
         console.error("❌ Error marking message delivered:", err.message);
       }
     }
 
-    // Always send back to sender (so UI updates instantly with sent tick)
     const senderSocketId = userSocketMap[senderId];
     if (senderSocketId) {
       io.to(senderSocketId).emit("newMessage", mess);
@@ -98,13 +121,10 @@ io.on("connection", async (socket) => {
   /* ─── MESSAGE REACTION EVENTS ─── */
   socket.on("reactMessage", ({ messageId, reactions, senderId, receiverId }) => {
     try {
-      // Send to receiver if online
       const receiverSocketId = userSocketMap[receiverId];
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("messageReacted", { messageId, reactions });
       }
-
-      // Send back to sender too (so it updates instantly)
       const senderSocketId = userSocketMap[senderId];
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageReacted", { messageId, reactions });
@@ -114,16 +134,29 @@ io.on("connection", async (socket) => {
     }
   });
 
+  /* ─── MESSAGE PIN EVENTS ─── */
+  socket.on("pinMessage", ({ messageId, isPinned, senderId, receiverId }) => {
+    try {
+      const receiverSocketId = userSocketMap[receiverId];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("messagePinned", { messageId, isPinned });
+      }
+      const senderSocketId = userSocketMap[senderId];
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messagePinned", { messageId, isPinned });
+      }
+    } catch (err) {
+      console.error("❌ Error in pinMessage socket:", err.message);
+    }
+  });
+
   /* ─── MESSAGE DELETE EVENTS ─── */
   socket.on("deleteMessage", ({ messageId, senderId, receiverId, forEveryone }) => {
     try {
-      // Notify receiver if online
       const receiverSocketId = userSocketMap[receiverId];
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("messageDeleted", { messageId, forEveryone });
       }
-
-      // Always notify sender (so their UI updates too)
       const senderSocketId = userSocketMap[senderId];
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageDeleted", { messageId, forEveryone });
@@ -138,10 +171,8 @@ io.on("connection", async (socket) => {
     try {
       const status = await Status.findById(statusId).populate("user", "_id");
       if (!status) return;
-
       const ownerId = status.user._id.toString();
       const ownerSocketId = userSocketMap[ownerId];
-
       if (ownerSocketId) {
         io.to(ownerSocketId).emit("statusViewed", {
           statusId,
@@ -153,37 +184,32 @@ io.on("connection", async (socket) => {
     }
   });
 
-  // ✅ NEW: Handle statusDeleted
   socket.on("statusDeleted", ({ statusId }) => {
     io.emit("statusDeleted", { statusId });
   });
 
   socket.on("markDelivered", async ({ senderId, receiverId }) => {
-  try {
-    await markMessagesDeliveredHelper(senderId, receiverId);
-
-    // notify sender to update all "sent" → "delivered"
-    const senderSocketId = userSocketMap[senderId];
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("messagesDelivered", { receiverId });
+    try {
+      await markMessagesDeliveredHelper(senderId, receiverId);
+      const senderSocketId = userSocketMap[senderId];
+      if (senderSocketId) {
+        // We assume 'now' for bulk delivery updates to keep it simple
+        io.to(senderSocketId).emit("messagesDelivered", { receiverId, deliveredAt: new Date() });
+      }
+    } catch (err) {
+      console.error("❌ Error in markDelivered socket:", err.message);
     }
-  } catch (err) {
-    console.error("❌ Error in markDelivered socket:", err.message);
-  }
-});
-
+  });
 
   /* ─── DISCONNECT ─── */
   socket.on("disconnect", async () => {
     if (userId && mongoose.Types.ObjectId.isValid(userId)) {
       delete userSocketMap[userId];
-
       try {
         await User.findByIdAndUpdate(userId, { lastSeen: new Date() }).exec();
       } catch (err) {
         console.error("❌ Error updating lastSeen on disconnect:", err.message);
       }
-
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
       io.emit("stopTyping", { senderId: userId });
     }

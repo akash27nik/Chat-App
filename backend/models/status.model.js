@@ -6,17 +6,54 @@ const statusSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  // ✅ New Fields for Text Status
+  type: {
+    type: String,
+    enum: ["media", "text"],
+    default: "media",
+  },
+  text: {
+    type: String, // Content for text status
+  },
+  font: {
+    type: String,
+    default: "font-sans",
+  },
+  color: {
+    type: String,
+    default: "#000000", // Background color
+  },
+  
+  // ✅ Media is now optional (required only if type is 'media')
+  mediaUrl: {
+    type: String,
+    required: function() { return this.type === 'media'; } 
+  },
+  
   caption: {
     type: String,
     default: "",
   },
-  mediaUrl: {
+  musicUrl: {
     type: String,
-    required: true,
+    default: "",
+  },
+  musicStartTime: {
+    type: Number,
+    default: 0,
+  },
+  musicDuration: {
+    type: Number,
+    default: 15, 
+  },
+  isMuted: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,
     default: Date.now,
+    expires: 86400, // 24 Hours TTL
   },
   viewers: [
     {
